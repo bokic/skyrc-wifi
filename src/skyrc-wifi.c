@@ -484,7 +484,6 @@ bool skyrc_connect_to_device_from_hostname_type(const char *hostname, enum skyrc
         return false;
     *device = nullptr;
 
-    *device = nullptr;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     if (getaddrinfo(hostname, "8888", &hints, &addresses) != 0)
