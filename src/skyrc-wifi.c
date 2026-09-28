@@ -114,7 +114,7 @@ struct skyrc_real_data_a {
         if (recieved < 0) {                                                                                                       \
             return SKYRC_UNABLE_TO_RECIEVE_MESSAGE;                                                                                \
         }                                                                                                                         \
-        reply_size = (socklen_t)recieved;                                                                                         \
+        reply_size = recieved;                                                                                                    \
     } while (0)
 
 
@@ -251,7 +251,7 @@ static int skyrc_hex_value(unsigned char c)
 }
 
 /* Matches java.net.URLDecoder.decode() for the discovery response payload. */
-static char *skyrc_url_decode(const char *input, size_t input_size, size_t *output_size)
+static char *skyrc_url_decode(const unsigned char *input, size_t input_size, size_t *output_size)
 {
     char *output = malloc(input_size + 1);
     size_t in = 0, out = 0;
@@ -260,14 +260,14 @@ static char *skyrc_url_decode(const char *input, size_t input_size, size_t *outp
         return nullptr;
 
     while (in < input_size) {
-        unsigned char c = (unsigned char)input[in++];
+        unsigned char c = input[in++];
         if (c == '+') {
             output[out++] = ' ';
         } else if (c == '%') {
             int high, low;
             if (in + 1 >= input_size ||
-                (high = skyrc_hex_value((unsigned char)input[in])) < 0 ||
-                (low = skyrc_hex_value((unsigned char)input[in + 1])) < 0) {
+                (high = skyrc_hex_value(input[in])) < 0 ||
+                (low = skyrc_hex_value(input[in + 1])) < 0) {
                 free(output);
                 return nullptr;
             }
@@ -302,7 +302,7 @@ skyrc_device *skyrc_find(int sockfd)
     json_object *response = nullptr;
     json_tokener *tokener = nullptr;
     struct sockaddr_in cliaddr;
-    char buffer[MAX_BUF + 1];
+    unsigned char buffer[MAX_BUF + 1];
     char ip[INET_ADDRSTRLEN];
     size_t decoded_size = 0;
     char *decoded = nullptr;
@@ -320,7 +320,7 @@ skyrc_device *skyrc_find(int sockfd)
         goto cleanup;
 
     /* Discovery replies have a one-byte binary prefix followed by encoded JSON. */
-    if ((unsigned char)buffer[0] != 0)
+    if (buffer[0] != 0)
         goto cleanup;
     decoded = skyrc_url_decode(buffer + 1, (size_t)n - 1, &decoded_size);
     if (!decoded || decoded_size == 0 || decoded_size > INT32_MAX)
@@ -626,7 +626,7 @@ static enum skyrc_error skyrc_request_current_state_standard(skyrc_device *devic
 {
     static const uint8_t command[] = {1, 15, 3, 95, 0, 95, 0xff, 0xff};
     uint8_t reply[2000] = {0};
-    socklen_t reply_size = sizeof(reply);
+    ssize_t reply_size = 0;
     ssize_t recieved = 0;
     skyrc_current_state parsed = {0};
 
@@ -657,7 +657,7 @@ static enum skyrc_error skyrc_request_current_state_dx00(skyrc_device *device, e
     static const uint8_t command_a[] = {1, 15, 4, 95, 0, 0, 95, 0xff, 0xff};
     static const uint8_t command_b[] = {1, 15, 4, 95, 0, 1, 96, 0xff, 0xff};
     uint8_t reply[2000] = {0};
-    socklen_t reply_size = sizeof(reply);
+    ssize_t reply_size = 0;
     ssize_t recieved = 0;
     skyrc_current_state parsed = {0};
 
@@ -734,7 +734,7 @@ static uint16_t skyrc_read_be16(const uint8_t *bytes)
     return (uint16_t)(((uint16_t)bytes[0] << 8) | bytes[1]);
 }
 
-static enum skyrc_error skyrc_parse_system_info(const uint8_t *reply, socklen_t reply_size,
+static enum skyrc_error skyrc_parse_system_info(const uint8_t *reply, size_t reply_size,
                                    bool is_dx00, enum skyrc_device_state state,
                                    skyrc_system_info *result)
 {
@@ -794,7 +794,7 @@ static enum skyrc_error skyrc_request_system_info(skyrc_device *device, enum sky
     static const uint8_t command_a[] = {1, 15, 4, 90, 0, 0, 90, 0xff, 0xff};
     static const uint8_t command_b[] = {1, 15, 4, 90, 0, 1, 91, 0xff, 0xff};
     uint8_t reply[2000] = {0};
-    socklen_t reply_size = sizeof(reply);
+    ssize_t reply_size = 0;
     ssize_t recieved = 0;
     bool is_dx00 = device->device == SKYRC_D100 || device->device == SKYRC_D200;
     skyrc_system_info parsed = {0};
@@ -815,7 +815,7 @@ static enum skyrc_error skyrc_request_system_info(skyrc_device *device, enum sky
         SKYRC_SEND_RECEIVE_UDP(command, reply);
     }
 
-    status = skyrc_parse_system_info(reply, reply_size, is_dx00, state, &parsed);
+    status = skyrc_parse_system_info(reply, (size_t)reply_size, is_dx00, state, &parsed);
     if (status != SKYRC_NO_ERROR)
         return status;
     device->system_info[state] = parsed;
@@ -890,7 +890,7 @@ bool skyrc_system_info_get_cell_voltage(const skyrc_system_info *info, size_t ce
     return true;
 }
 
-static enum skyrc_error skyrc_parse_real_data(const uint8_t *reply, socklen_t reply_size,
+static enum skyrc_error skyrc_parse_real_data(const uint8_t *reply, size_t reply_size,
                                  bool is_dx00, enum skyrc_device_state state,
                                  skyrc_real_data_a *result)
 {
@@ -963,7 +963,7 @@ enum skyrc_error skyrc_get_real_data(skyrc_device *device, enum skyrc_device_sta
     static const uint8_t command_a[] = {1, 15, 4, 85, 0, 0, 85, 0xff, 0xff};
     static const uint8_t command_b[] = {1, 15, 4, 85, 0, 1, 86, 0xff, 0xff};
     uint8_t reply[2000] = {0};
-    socklen_t reply_size = sizeof(reply);
+    ssize_t reply_size = 0;
     ssize_t recieved = 0;
     bool is_dx00;
     int status;
@@ -988,7 +988,7 @@ enum skyrc_error skyrc_get_real_data(skyrc_device *device, enum skyrc_device_sta
         SKYRC_SEND_RECEIVE_UDP(command, reply);
     }
 
-    status = skyrc_parse_real_data(reply, reply_size, is_dx00, state, result);
+    status = skyrc_parse_real_data(reply, (size_t)reply_size, is_dx00, state, result);
     return status;
 }
 
@@ -1119,7 +1119,7 @@ enum skyrc_error skyrc_stop(skyrc_device *device, int channel)
     const uint8_t command_dx00_ch1[] = {1, 15, 4, 0xfe, 0,  0, 0xfe, 0xff, 0xff};
     const uint8_t command_dx00_ch2[] = {1, 15, 4, 0xfe, 0,  1, 0xff, 0xff, 0xff};
     uint8_t reply[2000] = {0, };
-    socklen_t reply_size = sizeof(reply);
+    ssize_t reply_size = 0;
     ssize_t recieved = 0;
     bool is_dx00;
 
