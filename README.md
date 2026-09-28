@@ -30,7 +30,7 @@ Requirements: CMake 3.15 or newer, a C23 compiler, and `json-c` development file
 The build requires a semantic version. It uses the latest Git tag by default; for a source archive or checkout without a tag, set `LIBSKYRC_VERSION`:
 
 ```sh
-cmake -S . -B build -DLIBSKYRC_VERSION=1.0.0
+cmake -S . -B build -DLIBSKYRC_VERSION=4.2.0
 cmake --build build
 ```
 
