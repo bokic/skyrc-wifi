@@ -1502,13 +1502,19 @@ enum skyrc_error skyrc_wifi_configure(skyrc_device *device, const char *ssid,
     encoded = skyrc_form_url_encode(json_text);
     json_object_put(configuration);
     if (!encoded) return SKYRC_UNKNOWN_ERROR;
-    path_size = strlen(encoded) + sizeof("/cmd=01&json=");
-    path = malloc(path_size);
-    if (!path) {
-        free(encoded);
-        return SKYRC_UNKNOWN_ERROR;
+    {
+        static const char prefix[] = "/cmd=01&json=";
+        size_t prefix_len = strlen(prefix);
+        size_t encoded_len = strlen(encoded);
+        path_size = prefix_len + encoded_len + 1;
+        path = malloc(path_size);
+        if (!path) {
+            free(encoded);
+            return SKYRC_UNKNOWN_ERROR;
+        }
+        memcpy(path, prefix, prefix_len);
+        memcpy(path + prefix_len, encoded, encoded_len + 1);
     }
-    snprintf(path, path_size, "/cmd=01&json=%s", encoded);
     free(encoded);
 
     status = skyrc_http_get(device, path, &body);
