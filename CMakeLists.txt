@@ -51,6 +51,34 @@ add_library(libskyrc-wifi SHARED
 )
 target_compile_definitions(libskyrc-wifi PRIVATE libskyrc_wifi_EXPORTS)
 target_link_libraries(libskyrc-wifi PRIVATE json-c)
+target_compile_options(libskyrc-wifi PRIVATE
+    $<$<C_COMPILER_ID:GNU,Clang>:
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wcast-qual
+        -Wcast-align
+        -Wstrict-prototypes
+        -Wmissing-prototypes
+        -Wmissing-declarations
+        -Wredundant-decls
+        -Wnull-dereference
+        -Wformat=2
+        -Wformat-overflow=2
+        -Wformat-truncation=2
+        -Wvla
+        -Wwrite-strings
+        -Wconversion
+        -Wsign-conversion
+        -Wdouble-promotion
+        -Wundef
+        -Wuninitialized
+        -Winit-self
+        -Wlogical-op
+        -Werror
+    >
+)
 
 set_target_properties(libskyrc-wifi PROPERTIES
     PUBLIC_HEADER "../include/skyrc-wifi.h"
