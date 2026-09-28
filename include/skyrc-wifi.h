@@ -73,13 +73,13 @@ extern "C" {
  * @param timeout Receive timeout in milliseconds.
  * @return Socket descriptor on success, or a positive skyrc_error value.
  */
-EXPORT_SKYRC int skyrc_send_start_listen(int timeout);
+EXPORT_SKYRC int skyrc_start_listen(int timeout);
 
 /** Close a discovery socket.
- * @param socket Socket descriptor returned by skyrc_send_start_listen().
+ * @param socket Socket descriptor returned by skyrc_start_listen().
  * @return 0 on success, or SKYRC_FAILED_TO_CLOSE_SOCKET.
  */
-EXPORT_SKYRC enum skyrc_error skyrc_send_stop_listen(int socket);
+EXPORT_SKYRC enum skyrc_error skyrc_stop_listen(int socket);
 
 /** Send the LAN discovery broadcast.
  * @param sockfd Listening UDP socket descriptor.
@@ -91,48 +91,48 @@ EXPORT_SKYRC enum skyrc_error skyrc_send_broadcast(int sockfd);
  * @param sockfd Socket with a pending discovery response.
  * @return Newly allocated device on success; NULL for timeout, invalid reply, or allocation failure.
  */
-EXPORT_SKYRC skyrc_device *skyrc_find(int sockfd);
+EXPORT_SKYRC skyrc_device *skyrc_find_device(int sockfd);
 
 /** Release a device and any socket and strings owned by it.
  * @param item Device returned by a discovery or connection function; NULL is allowed.
  */
 EXPORT_SKYRC void skyrc_free_item(skyrc_device *item);
 
-/** Connect to a charger using a numeric IPv4 or IPv6 address on UDP port 8888.
+/** Create a device handle and UDP socket for a numeric IPv4 or IPv6 address on port 8888.
  * @param ip Numeric address literal (IPv6 zone identifiers are accepted).
  * @param device Receives the allocated device handle on success.
  * @return true on success, false for invalid input, resolution, or socket errors.
  */
-EXPORT_SKYRC bool skyrc_connect_to_device_from_ip(const char *ip, skyrc_device **device);
+EXPORT_SKYRC bool skyrc_open_device_at_ip(const char *ip, skyrc_device **device);
 
-/** Connect to a charger by numeric address and assign its model family.
+/** Create a device handle and UDP socket by numeric address and assign its model family.
  * @param ip Numeric IPv4 or IPv6 address literal.
  * @param type Charger family, or SKYRC_UNKNOWN if not known.
  * @param device Receives the allocated device handle on success.
  * @return true on success, false for invalid input, resolution, or socket errors.
  */
-EXPORT_SKYRC bool skyrc_connect_to_device_from_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device);
+EXPORT_SKYRC bool skyrc_open_device_at_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device);
 
-/** Resolve a hostname and connect to its first usable IPv4 or IPv6 address.
+/** Resolve a hostname and create a device handle and UDP socket for its first usable address.
  * @param hostname Hostname to resolve.
  * @param device Receives the allocated device handle on success.
  * @return true on success, false for invalid input, resolution, or socket errors.
  */
-EXPORT_SKYRC bool skyrc_connect_to_device_from_hostname(const char *hostname, skyrc_device **device);
+EXPORT_SKYRC bool skyrc_open_device_at_hostname(const char *hostname, skyrc_device **device);
 
-/** Resolve a hostname and connect, assigning its model family.
+/** Resolve a hostname and create a device handle and UDP socket, assigning its model family.
  * @param hostname Hostname to resolve.
  * @param type Charger family, or SKYRC_UNKNOWN if not known.
  * @param device Receives the allocated device handle on success.
  * @return true on success, false for invalid input, resolution, or socket errors.
  */
-EXPORT_SKYRC bool skyrc_connect_to_device_from_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device);
+EXPORT_SKYRC bool skyrc_open_device_at_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device);
 
-/** Check that a device has a valid connected UDP socket and endpoint.
+/** Check that a device handle has an initialized UDP socket and endpoint.
  * @param device Device handle to check.
- * @return true when the handle contains an initialized connection.
+ * @return true when the handle contains an initialized socket and endpoint.
  */
-EXPORT_SKYRC bool skyrc_connect_to_device(skyrc_device *device);
+EXPORT_SKYRC bool skyrc_device_is_initialized(const skyrc_device *device);
 
 /** Get the model family associated with a device.
  * @param device Device handle.
@@ -186,7 +186,7 @@ EXPORT_SKYRC const char *skyrc_device_get_mode(const skyrc_device *device);
  * @param device_type Value from skyrc_device_type.
  * @return Borrowed operations table, or NULL for unsupported/unknown family.
  */
-EXPORT_SKYRC const skyrc_operations *skyrc_get_operations(int device_type);
+EXPORT_SKYRC const skyrc_operations *skyrc_get_operations(enum skyrc_device_type device_type);
 
 /** Count supported battery types.
  * @param operations Operations table from skyrc_get_operations().
@@ -289,7 +289,7 @@ EXPORT_SKYRC bool skyrc_real_data_a_get_error_code(const skyrc_real_data_a *data
  * @param state Channel A or B; non-D100/D200 models only support A.
  * @return SKYRC_NO_ERROR on success, otherwise a skyrc_error value.
  */
-EXPORT_SKYRC enum skyrc_error skyrc_get_current_state(skyrc_device *device, enum skyrc_device_state state);
+EXPORT_SKYRC enum skyrc_error skyrc_request_current_state(skyrc_device *device, enum skyrc_device_state state);
 
 /** Copy the cached state for a channel into a caller-owned opaque result.
  * @param device Charger containing a previously received state.
@@ -363,19 +363,19 @@ EXPORT_SKYRC enum skyrc_error skyrc_get_real_data(skyrc_device *device, enum sky
  * @param device Connected non-D100/D200 charger.
  * @return SKYRC_NO_ERROR on success, otherwise a skyrc_error value.
  */
-EXPORT_SKYRC enum skyrc_error skyrc_sys_info(skyrc_device *device);
+EXPORT_SKYRC enum skyrc_error skyrc_request_system_info_standard(skyrc_device *device);
 
 /** Request and cache D100/D200 channel A system configuration.
  * @param device Connected D100/D200 charger.
  * @return SKYRC_NO_ERROR on success, otherwise a skyrc_error value.
  */
-EXPORT_SKYRC enum skyrc_error skyrc_sys_info_d100_a(skyrc_device *device);
+EXPORT_SKYRC enum skyrc_error skyrc_request_system_info_dx00_a(skyrc_device *device);
 
 /** Request and cache D100/D200 channel B system configuration.
  * @param device Connected D100/D200 charger.
  * @return SKYRC_NO_ERROR on success, otherwise a skyrc_error value.
  */
-EXPORT_SKYRC enum skyrc_error skyrc_sys_info_d100_b(skyrc_device *device);
+EXPORT_SKYRC enum skyrc_error skyrc_request_system_info_dx00_b(skyrc_device *device);
 
 /** Copy cached system configuration into a caller-owned result object.
  * @param device Charger containing previously received system information.

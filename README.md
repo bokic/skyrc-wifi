@@ -54,7 +54,7 @@ This example connects to a charger at a known address, prints its model, then re
 int main(void)
 {
     skyrc_device *device = NULL;
-    if (!skyrc_connect_to_device_from_ip("192.168.1.50", &device)) {
+    if (!skyrc_open_device_at_ip("192.168.1.50", &device)) {
         fprintf(stderr, "Could not connect to charger\n");
         return 1;
     }
@@ -65,12 +65,12 @@ int main(void)
 }
 ```
 
-Link applications with `libskyrc-wifi` and `json-c` (and make the generated library discoverable by the runtime linker). For discovery, call `skyrc_send_start_listen()`, `skyrc_send_broadcast()`, and `skyrc_find()`, then close the listener with `skyrc_send_stop_listen()`. The listener API returns either a socket descriptor or a positive error code; because those ranges can overlap for low descriptor numbers, check the implementation's error constants and your platform's descriptor allocation when handling listener creation failures.
+Link applications with `libskyrc-wifi` and `json-c` (and make the generated library discoverable by the runtime linker). For discovery, call `skyrc_start_listen()`, `skyrc_send_broadcast()`, and `skyrc_find_device()`, then close the listener with `skyrc_stop_listen()`. The listener API returns either a socket descriptor or a positive error code; because those ranges can overlap for low descriptor numbers, check the implementation's error constants and your platform's descriptor allocation when handling listener creation failures.
 
-For a direct connection, use `skyrc_connect_to_device_from_ip()` or `skyrc_connect_to_device_from_hostname()`, then call query/control functions and release the handle with `skyrc_free_item()`. The device handle owns its socket and discovered metadata. Opaque result objects have their own `*_create()` / `*_free()` lifecycle; getter strings are borrowed and remain valid only while the device handle is alive.
+For a direct connection, use `skyrc_open_device_at_ip()` or `skyrc_open_device_at_hostname()`, then call query/control functions and release the handle with `skyrc_free_item()`. The device handle owns its socket and discovered metadata. Opaque result objects have their own `*_create()` / `*_free()` lifecycle; getter strings are borrowed and remain valid only while the device handle is alive.
 
 ## Notes
 
 - Discovery uses an IPv4 broadcast and binds UDP port `8888`; the process must be able to bind that port and broadcast on the local network.
 - Most models support channel A only. D100/D200 expose channel-aware status and system information for A and B.
-- `skyrc_get_current_state()` and other read functions retrieve data from the charger; corresponding `skyrc_device_get_*()` calls copy cached results into caller-created result objects.
+- `skyrc_request_current_state()` and other read functions retrieve data from the charger; corresponding `skyrc_device_get_*()` calls copy cached results into caller-created result objects.

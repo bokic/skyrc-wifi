@@ -162,7 +162,7 @@ static const skyrc_operations skyrc_operation_dx00 = {
 
 
 
-int skyrc_send_start_listen(int timeout)
+int skyrc_start_listen(int timeout)
 {
     int sockfd;
     struct sockaddr_in servaddr;
@@ -181,7 +181,7 @@ int skyrc_send_start_listen(int timeout)
     // Bind the socket with the server address
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
-        skyrc_send_stop_listen(sockfd);
+        skyrc_stop_listen(sockfd);
         return SKYRC_FAIL_TO_BIND_TO_SOCKET;
     }
 
@@ -192,19 +192,19 @@ int skyrc_send_start_listen(int timeout)
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
     {
-        skyrc_send_stop_listen(sockfd);
+        skyrc_stop_listen(sockfd);
         return SKYRC_SETSOCKOPT_FAILED;
     }
 
     return sockfd;
 }
 
-enum skyrc_error skyrc_send_stop_listen(int socket)
+enum skyrc_error skyrc_stop_listen(int socket)
 {
-    int ret = 0;
+    enum skyrc_error ret = SKYRC_NO_ERROR;
 
-    ret = close(socket);
-    if (ret == -1)
+    int res = close(socket);
+    if (res == -1)
     {
         ret = SKYRC_FAILED_TO_CLOSE_SOCKET;
     }
@@ -294,7 +294,7 @@ static json_object *skyrc_json_member(json_object *object, const char *name)
     return json_object_object_get_ex(object, name, &value) ? value : nullptr;
 }
 
-skyrc_device *skyrc_find(int sockfd)
+skyrc_device *skyrc_find_device(int sockfd)
 {
     skyrc_device *ret = nullptr;
     json_object *jobj = nullptr;
@@ -424,16 +424,15 @@ void skyrc_free_item(skyrc_device *item)
         if (item->password) free(item->password);
         if (item->mode) free(item->mode);
         free(item);
-        item = nullptr;
     }
 }
 
-bool skyrc_connect_to_device_from_ip(const char *ip, skyrc_device **device)
+bool skyrc_open_device_at_ip(const char *ip, skyrc_device **device)
 {
-    return skyrc_connect_to_device_from_ip_type(ip, SKYRC_UNKNOWN, device);
+    return skyrc_open_device_at_ip_type(ip, SKYRC_UNKNOWN, device);
 }
 
-bool skyrc_connect_to_device_from_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device)
+bool skyrc_open_device_at_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device)
 {
     struct addrinfo hints = {0};
     struct addrinfo *addresses = nullptr;
@@ -469,12 +468,12 @@ bool skyrc_connect_to_device_from_ip_type(const char *ip, enum skyrc_device_type
     return connected;
 }
 
-bool skyrc_connect_to_device_from_hostname(const char *hostname, skyrc_device **device)
+bool skyrc_open_device_at_hostname(const char *hostname, skyrc_device **device)
 {
-    return skyrc_connect_to_device_from_hostname_type(hostname, SKYRC_UNKNOWN, device);
+    return skyrc_open_device_at_hostname_type(hostname, SKYRC_UNKNOWN, device);
 }
 
-bool skyrc_connect_to_device_from_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device)
+bool skyrc_open_device_at_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device)
 {
     struct addrinfo hints = {0};
     struct addrinfo *addresses = nullptr;
@@ -528,12 +527,12 @@ const char *skyrc_device_get_version(const skyrc_device *device) { return device
 const char *skyrc_device_get_password(const skyrc_device *device) { return device ? device->password : NULL; }
 const char *skyrc_device_get_mode(const skyrc_device *device) { return device ? device->mode : NULL; }
 
-bool skyrc_connect_to_device(skyrc_device *device)
+bool skyrc_device_is_initialized(const skyrc_device *device)
 {
     return device && device->socket >= 0 && device->servaddr_len != 0;
 }
 
-const skyrc_operations *skyrc_get_operations(int device_type)
+const skyrc_operations *skyrc_get_operations(enum skyrc_device_type device_type)
 {
     switch(device_type)
     {
@@ -627,7 +626,7 @@ static enum skyrc_error skyrc_request_current_state_standard(skyrc_device *devic
     static const uint8_t command[] = {1, 15, 3, 95, 0, 95, 0xff, 0xff};
     uint8_t reply[2000] = {0};
     ssize_t reply_size = 0;
-    ssize_t recieved = 0;
+    ssize_t recieved;
     skyrc_current_state parsed = {0};
 
     SKYRC_SEND_RECEIVE_UDP(command, reply);
@@ -658,7 +657,7 @@ static enum skyrc_error skyrc_request_current_state_dx00(skyrc_device *device, e
     static const uint8_t command_b[] = {1, 15, 4, 95, 0, 1, 96, 0xff, 0xff};
     uint8_t reply[2000] = {0};
     ssize_t reply_size = 0;
-    ssize_t recieved = 0;
+    ssize_t recieved;
     skyrc_current_state parsed = {0};
 
     if (state == SKYRC_STATE_A)
@@ -686,7 +685,7 @@ static enum skyrc_error skyrc_request_current_state_dx00(skyrc_device *device, e
     return SKYRC_NO_ERROR;
 }
 
-enum skyrc_error skyrc_get_current_state(skyrc_device *device, enum skyrc_device_state state)
+enum skyrc_error skyrc_request_current_state(skyrc_device *device, enum skyrc_device_state state)
 {
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (state != SKYRC_STATE_A && state != SKYRC_STATE_B)
@@ -795,10 +794,10 @@ static enum skyrc_error skyrc_request_system_info(skyrc_device *device, enum sky
     static const uint8_t command_b[] = {1, 15, 4, 90, 0, 1, 91, 0xff, 0xff};
     uint8_t reply[2000] = {0};
     ssize_t reply_size = 0;
-    ssize_t recieved = 0;
+    ssize_t recieved;
     bool is_dx00 = device->device == SKYRC_D100 || device->device == SKYRC_D200;
     skyrc_system_info parsed = {0};
-    int status;
+    enum skyrc_error status;
 
     if (device->socket < 0) return SKYRC_INVALID_SOCKET;
     if (state != SKYRC_STATE_A && state != SKYRC_STATE_B)
@@ -823,7 +822,7 @@ static enum skyrc_error skyrc_request_system_info(skyrc_device *device, enum sky
     return SKYRC_NO_ERROR;
 }
 
-enum skyrc_error skyrc_sys_info(skyrc_device *device)
+enum skyrc_error skyrc_request_system_info_standard(skyrc_device *device)
 {
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (device->device == SKYRC_D100 || device->device == SKYRC_D200)
@@ -833,7 +832,7 @@ enum skyrc_error skyrc_sys_info(skyrc_device *device)
     return skyrc_request_system_info(device, SKYRC_STATE_A);
 }
 
-enum skyrc_error skyrc_sys_info_d100_a(skyrc_device *device)
+enum skyrc_error skyrc_request_system_info_dx00_a(skyrc_device *device)
 {
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (device->device != SKYRC_D100 && device->device != SKYRC_D200)
@@ -841,7 +840,7 @@ enum skyrc_error skyrc_sys_info_d100_a(skyrc_device *device)
     return skyrc_request_system_info(device, SKYRC_STATE_A);
 }
 
-enum skyrc_error skyrc_sys_info_d100_b(skyrc_device *device)
+enum skyrc_error skyrc_request_system_info_dx00_b(skyrc_device *device)
 {
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (device->device != SKYRC_D100 && device->device != SKYRC_D200)
@@ -964,9 +963,9 @@ enum skyrc_error skyrc_get_real_data(skyrc_device *device, enum skyrc_device_sta
     static const uint8_t command_b[] = {1, 15, 4, 85, 0, 1, 86, 0xff, 0xff};
     uint8_t reply[2000] = {0};
     ssize_t reply_size = 0;
-    ssize_t recieved = 0;
+    ssize_t recieved;
     bool is_dx00;
-    int status;
+    enum skyrc_error status;
 
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (!result) return SKYRC_NULL_RESULT_HANDLE;
@@ -1304,7 +1303,8 @@ static enum skyrc_error skyrc_http_get(skyrc_device *device, const char *path, c
     char response[SKYRC_HTTP_MAX_RESPONSE + 1];
     size_t request_size, response_size = 0;
     const char *body;
-    int http_socket = -1, http_status = 0, status = SKYRC_UNKNOWN_ERROR;
+    int http_socket = -1, http_status = 0;
+    enum skyrc_error status = SKYRC_UNKNOWN_ERROR;
     ssize_t count;
 
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
@@ -1331,8 +1331,7 @@ static enum skyrc_error skyrc_http_get(skyrc_device *device, const char *path, c
         return SKYRC_UNABLE_TO_SEND_MESSAGE;
     }
 
-    int request_length = snprintf(request, sizeof(request),
-                                  "GET %s HTTP/1.0\r\nConnection: close\r\n\r\n", path);
+    int request_length = snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\nConnection: close\r\n\r\n", path);
     if (request_length < 0 || (size_t)request_length >= sizeof(request)) {
         close(http_socket);
         return SKYRC_INVALID_INPUT_PARAMETER;
@@ -1422,7 +1421,7 @@ enum skyrc_error skyrc_wifi_scan(skyrc_device *device, char *networks_json,
     json_object *root = nullptr, *response = nullptr, *data = nullptr;
     const char *network_text;
     size_t needed;
-    int status;
+    enum skyrc_error status;
 
     if (!networks_json || !json_size) return SKYRC_NULL_RESULT_HANDLE;
     *json_size = 0;
@@ -1487,8 +1486,7 @@ enum skyrc_error skyrc_wifi_configure(skyrc_device *device, const char *ssid,
     json_object *configuration = nullptr, *root = nullptr;
     const char *json_text;
     char *encoded = nullptr, *path = nullptr, *body = nullptr;
-    size_t path_size;
-    int status;
+    enum skyrc_error status;
 
     if (!device) return SKYRC_NULL_DEVICE_HANDLE;
     if (!ssid || !password) return SKYRC_INVALID_INPUT_PARAMETER;
@@ -1506,7 +1504,7 @@ enum skyrc_error skyrc_wifi_configure(skyrc_device *device, const char *ssid,
         static const char prefix[] = "/cmd=01&json=";
         size_t prefix_len = strlen(prefix);
         size_t encoded_len = strlen(encoded);
-        path_size = prefix_len + encoded_len + 1;
+        size_t path_size = prefix_len + encoded_len + 1;
         path = malloc(path_size);
         if (!path) {
             free(encoded);
