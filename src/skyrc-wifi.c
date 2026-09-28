@@ -427,31 +427,28 @@ void skyrc_free_item(skyrc_device *item)
     }
 }
 
-bool skyrc_open_device_at_ip(const char *ip, skyrc_device **device)
-{
-    return skyrc_open_device_at_ip_type(ip, SKYRC_UNKNOWN, device);
-}
-
-bool skyrc_open_device_at_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device)
+bool skyrc_open_device(const char *host, skyrc_device **device)
 {
     struct addrinfo hints = {0};
     struct addrinfo *addresses = nullptr;
     bool connected = false;
 
-    if (!ip || !device)
+    if (!host || !device)
         return false;
     *device = nullptr;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_NUMERICHOST;
-    if (getaddrinfo(ip, "8888", &hints, &addresses) != 0)
+    if (getaddrinfo(host, "8888", &hints, &addresses) != 0)
         return false;
     for (struct addrinfo *address = addresses; address; address = address->ai_next) {
+        char ip[NI_MAXHOST];
         skyrc_device *candidate = calloc(1, sizeof(*candidate));
         if (!candidate) break;
         candidate->socket = -1;
-        candidate->ip = strdup(ip);
-        candidate->device = type;
+        candidate->device = SKYRC_UNKNOWN;
+        if (getnameinfo(address->ai_addr, (socklen_t)address->ai_addrlen,
+                        ip, sizeof(ip), nullptr, 0, NI_NUMERICHOST) == 0)
+            candidate->ip = strdup(ip);
         if (candidate->ip && address->ai_addrlen <= sizeof(candidate->servaddr)) {
             memcpy(&candidate->servaddr, address->ai_addr, address->ai_addrlen);
             candidate->servaddr_len = (socklen_t)address->ai_addrlen;
@@ -464,52 +461,6 @@ bool skyrc_open_device_at_ip_type(const char *ip, enum skyrc_device_type type, s
         }
         skyrc_free_item(candidate);
     }
-    freeaddrinfo(addresses);
-    return connected;
-}
-
-bool skyrc_open_device_at_hostname(const char *hostname, skyrc_device **device)
-{
-    return skyrc_open_device_at_hostname_type(hostname, SKYRC_UNKNOWN, device);
-}
-
-bool skyrc_open_device_at_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device)
-{
-    struct addrinfo hints = {0};
-    struct addrinfo *addresses = nullptr;
-    bool connected = false;
-
-    if (!hostname || !device)
-        return false;
-    *device = nullptr;
-
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    if (getaddrinfo(hostname, "8888", &hints, &addresses) != 0)
-        return false;
-
-    for (struct addrinfo *address = addresses; address; address = address->ai_next) {
-        char ip[NI_MAXHOST];
-        skyrc_device *candidate = calloc(1, sizeof(*candidate));
-        if (!candidate) break;
-        candidate->socket = -1;
-        candidate->device = type;
-        if (getnameinfo(address->ai_addr, (socklen_t)address->ai_addrlen,
-                        ip, sizeof(ip), nullptr, 0, NI_NUMERICHOST) == 0)
-            candidate->ip = strdup(ip);
-        if (address->ai_addrlen <= sizeof(candidate->servaddr)) {
-            memcpy(&candidate->servaddr, address->ai_addr, address->ai_addrlen);
-            candidate->servaddr_len = (socklen_t)address->ai_addrlen;
-            candidate->socket = socket(address->ai_family, SOCK_DGRAM, IPPROTO_UDP);
-        }
-        if (candidate->ip && candidate->socket >= 0) {
-            *device = candidate;
-            connected = true;
-            break;
-        }
-        skyrc_free_item(candidate);
-    }
-
     freeaddrinfo(addresses);
     return connected;
 }

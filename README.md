@@ -54,7 +54,7 @@ This example connects to a charger at a known address, prints its model, then re
 int main(void)
 {
     skyrc_device *device = NULL;
-    if (!skyrc_open_device_at_ip("192.168.1.50", &device)) {
+    if (!skyrc_open_device("192.168.1.50", &device)) {
         fprintf(stderr, "Could not connect to charger\n");
         return 1;
     }
@@ -67,7 +67,7 @@ int main(void)
 
 Link applications with `libskyrc-wifi` and `json-c` (and make the generated library discoverable by the runtime linker). For discovery, call `skyrc_start_listen()`, `skyrc_send_broadcast()`, and `skyrc_find_device()`, then close the listener with `skyrc_stop_listen()`. The listener API returns either a socket descriptor or a positive error code; because those ranges can overlap for low descriptor numbers, check the implementation's error constants and your platform's descriptor allocation when handling listener creation failures.
 
-For a direct connection, use `skyrc_open_device_at_ip()` or `skyrc_open_device_at_hostname()`, then call query/control functions and release the handle with `skyrc_free_item()`. The device handle owns its socket and discovered metadata. Opaque result objects have their own `*_create()` / `*_free()` lifecycle; getter strings are borrowed and remain valid only while the device handle is alive.
+For a direct connection, use `skyrc_open_device()` with a hostname or numeric address, then call query/control functions and release the handle with `skyrc_free_item()`. The device handle owns its socket and discovered metadata. Opaque result objects have their own `*_create()` / `*_free()` lifecycle; getter strings are borrowed and remain valid only while the device handle is alive.
 
 ## Notes
 

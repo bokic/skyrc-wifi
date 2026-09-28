@@ -98,35 +98,12 @@ EXPORT_SKYRC skyrc_device *skyrc_find_device(int sockfd);
  */
 EXPORT_SKYRC void skyrc_free_item(skyrc_device *item);
 
-/** Create a device handle and UDP socket for a numeric IPv4 or IPv6 address on port 8888.
- * @param ip Numeric address literal (IPv6 zone identifiers are accepted).
+/** Resolve a hostname or numeric IPv4/IPv6 address and create a device handle and UDP socket on port 8888.
+ * @param host Hostname or address literal (IPv6 zone identifiers are accepted).
  * @param device Receives the allocated device handle on success.
  * @return true on success, false for invalid input, resolution, or socket errors.
  */
-EXPORT_SKYRC bool skyrc_open_device_at_ip(const char *ip, skyrc_device **device);
-
-/** Create a device handle and UDP socket by numeric address and assign its model family.
- * @param ip Numeric IPv4 or IPv6 address literal.
- * @param type Charger family, or SKYRC_UNKNOWN if not known.
- * @param device Receives the allocated device handle on success.
- * @return true on success, false for invalid input, resolution, or socket errors.
- */
-EXPORT_SKYRC bool skyrc_open_device_at_ip_type(const char *ip, enum skyrc_device_type type, skyrc_device **device);
-
-/** Resolve a hostname and create a device handle and UDP socket for its first usable address.
- * @param hostname Hostname to resolve.
- * @param device Receives the allocated device handle on success.
- * @return true on success, false for invalid input, resolution, or socket errors.
- */
-EXPORT_SKYRC bool skyrc_open_device_at_hostname(const char *hostname, skyrc_device **device);
-
-/** Resolve a hostname and create a device handle and UDP socket, assigning its model family.
- * @param hostname Hostname to resolve.
- * @param type Charger family, or SKYRC_UNKNOWN if not known.
- * @param device Receives the allocated device handle on success.
- * @return true on success, false for invalid input, resolution, or socket errors.
- */
-EXPORT_SKYRC bool skyrc_open_device_at_hostname_type(const char *hostname, enum skyrc_device_type type, skyrc_device **device);
+EXPORT_SKYRC bool skyrc_open_device(const char *host, skyrc_device **device);
 
 /** Check that a device handle has an initialized UDP socket and endpoint.
  * @param device Device handle to check.
