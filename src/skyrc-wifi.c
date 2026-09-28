@@ -309,7 +309,7 @@ skyrc_device *skyrc_find(int sockfd)
     socklen_t addr_size = sizeof(cliaddr);
     ssize_t n;
     const char *id, *name, *mac, *version, *password, *mode;
-    int parse_end;
+    size_t parse_end;
 
     if (sockfd < 0)
         return nullptr;
@@ -335,9 +335,9 @@ skyrc_device *skyrc_find(int sockfd)
         !jobj || json_object_get_type(jobj) != json_type_object)
         goto cleanup;
     parse_end = json_tokener_get_parse_end(tokener);
-    while (parse_end < (int)decoded_size && isspace((unsigned char)decoded[parse_end]))
+    while (parse_end < decoded_size && isspace((unsigned char)decoded[parse_end]))
         parse_end++;
-    if (parse_end != (int)decoded_size)
+    if (parse_end != decoded_size)
         goto cleanup;
 
     response = skyrc_json_member(jobj, "response");
@@ -1207,7 +1207,7 @@ static enum skyrc_error skyrc_send_system_option(skyrc_device *device, const uin
 
 enum skyrc_error skyrc_ext_set_speaker(skyrc_device *device, bool key, bool buzzer)
 {
-    uint8_t command[] = {1, 15, 7, 17, 3, 0, 0, 0, 0, 0, -1, -1};
+    uint8_t command[] = {1, 15, 7, 17, 3, 0, 0, 0, 0, 0, 0xff, 0xff};
 
     command[6] = key ? 1 : 0;
     command[7] = buzzer ? 1 : 0;
@@ -1221,10 +1221,10 @@ enum skyrc_error skyrc_ext_set_speaker(skyrc_device *device, bool key, bool buzz
 
 enum skyrc_error skyrc_ext_set_capacity(skyrc_device *device, bool on, uint16_t capacity)
 {
-    uint8_t command[] = {1, 15, 7, 17, 2, 0, 0, 0, 0, 0, -1, -1};
+    uint8_t command[] = {1, 15, 7, 17, 2, 0, 0, 0, 0, 0, 0xff, 0xff};
     command[6] = on ? 1 : 0;
-    command[7] = capacity >> 8;
-    command[8] = capacity >> 0;
+    command[7] = (uint8_t)(capacity >> 8);
+    command[8] = (uint8_t)(capacity >> 0);
 
     for (int i = 3; i < 9; i++) {
         command[9] += command[i];
@@ -1235,7 +1235,7 @@ enum skyrc_error skyrc_ext_set_capacity(skyrc_device *device, bool on, uint16_t 
 
 enum skyrc_error skyrc_ext_set_rest_time(skyrc_device *device, uint8_t minutes)
 {
-    uint8_t command[] = {1, 15, 7, 17, 0, 0, 0, 0, 0, 0, -1, -1};
+    uint8_t command[] = {1, 15, 7, 17, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
     command[6] = minutes;
 
     for (int i = 3; i < 9; i++) {
@@ -1247,10 +1247,10 @@ enum skyrc_error skyrc_ext_set_rest_time(skyrc_device *device, uint8_t minutes)
 
 enum skyrc_error skyrc_ext_set_time(skyrc_device *device, bool on, uint16_t minutes)
 {
-    uint8_t command[] = {1, 15, 7, 17, 1, 0, 0, 0, 0, 0, -1, -1};
+    uint8_t command[] = {1, 15, 7, 17, 1, 0, 0, 0, 0, 0, 0xff, 0xff};
     command[6] = on ? 1 : 0;
-    command[7] = minutes >> 8;
-    command[8] = minutes >> 0;
+    command[7] = (uint8_t)(minutes >> 8);
+    command[8] = (uint8_t)(minutes >> 0);
 
     for (int i = 3; i < 9; i++) {
         command[9] += command[i];
@@ -1261,7 +1261,7 @@ enum skyrc_error skyrc_ext_set_time(skyrc_device *device, bool on, uint16_t minu
 
 enum skyrc_error skyrc_ext_set_temp(skyrc_device *device, uint8_t temperature)
 {
-    uint8_t command[] = {1, 15, 7, 17, 5, 0, 0, 0, 0, 0, -1, -1};
+    uint8_t command[] = {1, 15, 7, 17, 5, 0, 0, 0, 0, 0, 0xff, 0xff};
 
     command[6] = temperature;
 
@@ -1363,7 +1363,7 @@ static enum skyrc_error skyrc_http_get(skyrc_device *device, const char *path, c
             if (length_header) {
                 char *end = nullptr;
                 unsigned long expected = strtoul(length_header, &end, 10);
-                size_t body_size = response + response_size - body;
+                size_t body_size = (size_t)(response + response_size - body);
                 if (end != length_header && expected <= SKYRC_HTTP_MAX_RESPONSE &&
                     body_size >= expected)
                     break;
@@ -1375,7 +1375,7 @@ static enum skyrc_error skyrc_http_get(skyrc_device *device, const char *path, c
     body = skyrc_find_header_end(response, response_size);
     if (!body || sscanf(response, "HTTP/%*u.%*u %d", &http_status) != 1 || http_status != 200)
         return SKYRC_INVALID_STATUS;
-    size_t body_size = response + response_size - body;
+    size_t body_size = (size_t)(response + response_size - body);
     *json_body = malloc(body_size + 1);
     if (!*json_body) return SKYRC_UNKNOWN_ERROR;
     memcpy(*json_body, body, body_size);
@@ -1389,7 +1389,7 @@ static json_object *skyrc_parse_http_json(const char *body)
     json_tokener *tokener;
     json_object *root;
     size_t body_size;
-    int end;
+    size_t end;
 
     if (!body) return nullptr;
     body_size = strlen(body);
@@ -1400,7 +1400,7 @@ static json_object *skyrc_parse_http_json(const char *body)
     root = json_tokener_parse_ex(tokener, body, (int)body_size);
     end = json_tokener_get_parse_end(tokener);
     if (json_tokener_get_error(tokener) != json_tokener_success || !root ||
-        json_object_get_type(root) != json_type_object || end != (int)body_size) {
+        json_object_get_type(root) != json_type_object || end != body_size) {
         if (root) json_object_put(root);
         root = nullptr;
     }
