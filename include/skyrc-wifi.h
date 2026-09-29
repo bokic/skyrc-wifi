@@ -117,6 +117,14 @@ EXPORT_SKYRC bool skyrc_device_is_initialized(const skyrc_device *device);
  */
 EXPORT_SKYRC enum skyrc_device_type skyrc_device_get_type(const skyrc_device *device);
 
+/** Override the model family stored in a device handle.
+ *  Use this after skyrc_open_device() when the charger model is known but was
+ *  not discovered automatically (discovery sets the type; direct connections do not).
+ * @param device Device handle; NULL is allowed (no-op).
+ * @param type   Model family to store.
+ */
+EXPORT_SKYRC void skyrc_device_set_type(skyrc_device *device, enum skyrc_device_type type);
+
 /** Get the device's numeric address string.
  * @param device Device handle.
  * @return Borrowed address string, or NULL for NULL device.

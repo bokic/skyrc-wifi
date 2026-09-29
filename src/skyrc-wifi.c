@@ -470,6 +470,12 @@ enum skyrc_device_type skyrc_device_get_type(const skyrc_device *device)
     return device ? device->device : SKYRC_UNKNOWN;
 }
 
+void skyrc_device_set_type(skyrc_device *device, enum skyrc_device_type type)
+{
+    if (device)
+        device->device = type;
+}
+
 const char *skyrc_device_get_ip(const skyrc_device *device) { return device ? device->ip : NULL; }
 const char *skyrc_device_get_id(const skyrc_device *device) { return device ? device->id : NULL; }
 const char *skyrc_device_get_name(const skyrc_device *device) { return device ? device->name : NULL; }
