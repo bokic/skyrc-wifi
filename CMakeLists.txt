@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 
 project(libskyrc C)
 
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install prefix" FORCE)
+endif()
+
 set(LIBSKYRC_VERSION "" CACHE STRING "Override the library version (X.Y.Z)")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -81,7 +85,7 @@ target_compile_options(libskyrc-wifi PRIVATE
 )
 
 set_target_properties(libskyrc-wifi PROPERTIES
-    PUBLIC_HEADER "../include/skyrc-wifi.h"
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/skyrc-wifi.h"
     INTERPROCEDURAL_OPTIMIZATION TRUE
     C_VISIBILITY_PRESET hidden
     OUTPUT_NAME "skyrc-wifi"
@@ -120,4 +124,12 @@ target_compile_options(skyrc PRIVATE
         -Wlogical-op
         -Werror
     >
+)
+
+include(GNUInstallDirs)
+
+install(TARGETS libskyrc-wifi skyrc
+    RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
