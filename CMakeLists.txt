@@ -96,6 +96,7 @@ set_target_properties(libskyrc-wifi PROPERTIES
 add_executable(skyrc
     src/main.c
 )
+set_target_properties(skyrc PROPERTIES OUTPUT_NAME "skyrc-wifi")
 target_link_libraries(skyrc PRIVATE libskyrc-wifi)
 target_compile_options(skyrc PRIVATE
     $<$<C_COMPILER_ID:GNU,Clang>:
