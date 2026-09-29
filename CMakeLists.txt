@@ -88,3 +88,36 @@ set_target_properties(libskyrc-wifi PROPERTIES
     VERSION "${LIBSKYRC_VERSION}"
     SOVERSION "${LIBSKYRC_SOVERSION}"
 )
+
+add_executable(skyrc
+    src/main.c
+)
+target_link_libraries(skyrc PRIVATE libskyrc-wifi)
+target_compile_options(skyrc PRIVATE
+    $<$<C_COMPILER_ID:GNU,Clang>:
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wcast-qual
+        -Wcast-align
+        -Wstrict-prototypes
+        -Wmissing-prototypes
+        -Wmissing-declarations
+        -Wredundant-decls
+        -Wnull-dereference
+        -Wformat=2
+        -Wformat-overflow=2
+        -Wformat-truncation=2
+        -Wvla
+        -Wwrite-strings
+        -Wconversion
+        -Wsign-conversion
+        -Wdouble-promotion
+        -Wundef
+        -Wuninitialized
+        -Winit-self
+        -Wlogical-op
+        -Werror
+    >
+)
